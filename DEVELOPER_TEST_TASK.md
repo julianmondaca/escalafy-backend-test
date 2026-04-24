@@ -115,8 +115,6 @@ El consumer debe:
 
 Para la queue, hay libertad absoluta, y no es necesario montar un sistema complejo para facilitar la ejecución del ejercicio. Si preferís armar algo simple y especificar que tecnología usarias en prod (Redis Streams, RabbitMQ, Kafka u otro sistema), está bien — pero explicá el trade-off en tu README. 
 
-**Por qué una queue en Postgres es válida acá:** una tabla estilo `jobs` con `SELECT FOR UPDATE SKIP LOCKED` te da semánticas durables, transaccionales, at-least-once con cero infraestructura adicional. A nuestra escala actual funciona bien. El trade-off es el techo de throughput y la simplicidad operacional — tu README debe reconocer esto.
-
 ---
 
 ### 3. Reconocimiento de Usuarios
