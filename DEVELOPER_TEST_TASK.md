@@ -158,9 +158,59 @@ La respuesta debe incluir, para cada día en el rango:
 - `checkouts_started` — conteo de eventos `checkout_start`
 - `checkouts_completed` — conteo de eventos `checkout_success`
 
-Este endpoint representa el funnel de conversión completo a lo largo del tiempo. Podés agregar otros endpoints si los considerás útiles — pero este es obligatorio.
+Este endpoint representa el funnel de conversión completo a lo largo del tiempo.
 
-Tené en cuenta: esta API corre contra **2 millones de eventos por día** en 3.000+ tiendas. Una tienda haciendo una promoción grande puede tener 50.000 eventos en un solo día. Consultar filas de eventos en bruto en cada API request no es un diseño viable a esta escala.
+#### Customer journey por conversión
+
+Un segundo endpoint te permite explorar el viaje completo de un cliente que convirtió:
+
+```
+GET /conversions/{checkout_id}/journey
+```
+
+Dado un `checkout_id`, retorna todas las sesiones previas de ese usuario (en orden cronológico) que llevaron a esa compra:
+
+```json
+{
+  "checkout_id": "checkout_123",
+  "store_id": "store_123",
+  "conversion_date": "2024-01-15T10:30:00Z",
+  "sessions": [
+    {
+      "session_id": "sess_111",
+      "first_seen": "2024-01-15T08:00:00Z",
+      "last_seen": "2024-01-15T08:15:00Z",
+      "events": [
+        {"type": "page_view", "object_id": "/products"},
+        {"type": "page_view", "object_id": "/products/electronics"}
+      ]
+    },
+    {
+      "session_id": "sess_222",
+      "first_seen": "2024-01-15T09:00:00Z",
+      "last_seen": "2024-01-15T09:45:00Z",
+      "events": [
+        {"type": "page_view", "object_id": "/products/electronics"},
+        {"type": "add_to_cart", "object_id": "prod_456"}
+      ]
+    },
+    {
+      "session_id": "sess_333",
+      "first_seen": "2024-01-15T10:00:00Z",
+      "last_seen": "2024-01-15T10:30:00Z",
+      "events": [
+        {"type": "page_view", "object_id": "/cart"},
+        {"type": "checkout_start", "object_id": "checkout_123"},
+        {"type": "checkout_success", "object_id": "checkout_123"}
+      ]
+    }
+  ]
+}
+```
+
+Este endpoint es fundamental para la atribución: permite ver exactamente qué touchpoints llevaron a una venta. Podés agregar otros endpoints si los considerás útiles — pero estos dos son los obligatorios.
+
+Tené en cuenta: esta API corre contra **2 millones de eventos por día** en 3.000+ tiendas. Una tienda haciendo una promoción grande puede tener 50.000 eventos en un solo día. Consultar filas de eventos en bruto en cada API request no es un diseño viable a esta escala. El query performance para ambos endpoints es crítico.
 
 Cómo resolvés el problema de performance de lectura es parte de la evaluación.
 
