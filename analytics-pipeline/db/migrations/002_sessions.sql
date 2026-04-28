@@ -1,0 +1,1 @@
+-- Creates the `sessions` and `user_identities` tables.

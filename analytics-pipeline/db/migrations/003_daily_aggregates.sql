@@ -1,0 +1,1 @@
+-- Creates the `daily_store_aggregates` table.
