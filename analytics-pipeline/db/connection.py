@@ -3,14 +3,16 @@ Manages the async PostgreSQL connection pool.
 """
 import asyncpg
 
+from config import settings
+
 _pool: asyncpg.Pool | None = None
 
 async def init_pool() -> None:
     """
     Initializes the connection pool using the database URL from settings.
     """
-    # TODO: Initialize the asyncpg connection pool and store it in _pool
-    pass
+    global _pool
+    _pool = await asyncpg.create_pool(settings.database_url, min_size=1, max_size=10)
 
 def get_pool() -> asyncpg.Pool:
     """
@@ -25,5 +27,7 @@ async def close_pool() -> None:
     """
     Closes the connection pool gracefully.
     """
-    # TODO: Close the pool if it exists
-    pass
+    global _pool
+    if _pool:
+        await _pool.close()
+        _pool = None

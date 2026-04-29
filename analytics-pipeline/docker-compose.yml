@@ -18,7 +18,9 @@ services:
       - "6379:6379"
 
   api:
-    build: ./api
+    build:
+      context: .
+      dockerfile: ./api/Dockerfile
     depends_on:
       - postgres
       - redis
@@ -28,7 +30,9 @@ services:
       - "8000:8000"
 
   reporting:
-    build: ./reporting
+    build:
+      context: .
+      dockerfile: ./reporting/Dockerfile
     depends_on:
       - postgres
     env_file:
@@ -37,7 +41,9 @@ services:
       - "8001:8001"
 
   worker:
-    build: ./workers
+    build:
+      context: .
+      dockerfile: ./workers/Dockerfile
     depends_on:
       - postgres
       - redis
