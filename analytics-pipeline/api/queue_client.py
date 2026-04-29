@@ -7,7 +7,7 @@ import redis.asyncio as redis
 
 from config import settings
 
-QUEUE_NAME = "events_queue"
+STREAM_NAME = "events_stream"
 
 
 class QueueClient:
@@ -22,4 +22,4 @@ class QueueClient:
         Pushes a single event object to the Redis queue.
         """
         event_json = json.dumps(event_data)
-        await self.redis.rpush(QUEUE_NAME, event_json)
+        await self.redis.xadd(STREAM_NAME, {"data": event_json})

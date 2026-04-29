@@ -68,6 +68,13 @@ class IdentityWorker:
 
             await asyncio.sleep(10)  # Run every 10 seconds
 
+    def link_sessions_by_checkout_id(self, sessions):
+        """
+        Links sessions by checkout_id.
+        """
+        # Logic to link sessions by checkout_id
+        # Implementation here
+
 
 async def resolve_identity(session_id: str, store_id: str) -> str:
     """
@@ -100,3 +107,6 @@ async def run_identity_worker() -> None:
 if __name__ == "__main__":
     logging.basicConfig(level="INFO")
     asyncio.run(run_identity_worker())
+
+# Llama a calculate_daily_aggregates en el flujo de trabajo
+calculate_daily_aggregates()  # Asegúrate de que se llame en el flujo de trabajo

@@ -5,7 +5,8 @@ import asyncio
 import json
 import logging
 
-import redis.asyncio as redis
+from redis.asyncio import Redis
+from redis.exceptions import ResponseError
 
 from config import settings
 from db.connection import init_pool, close_pool
@@ -15,7 +16,9 @@ from workers.deduplication import DeduplicationCache
 logging.basicConfig(level=settings.log_level)
 logger = logging.getLogger(__name__)
 
-QUEUE_NAME = "events_queue"
+STREAM_NAME = "events_stream"
+CONSUMER_GROUP = "consumer_group"
+CONSUMER_NAME = "consumer_1"
 
 
 async def run_worker() -> None:
@@ -24,41 +27,62 @@ async def run_worker() -> None:
     """
     logger.info("Initializing worker...")
     await init_pool()
-    redis_client = redis.from_url(settings.redis_url)
+    redis_client = Redis.from_url(settings.redis_url)
     batch_writer = BatchWriter()
     dedup_cache = DeduplicationCache(redis_client)
 
     try:
+        await redis_client.xgroup_create(STREAM_NAME, CONSUMER_GROUP, id="0", mkstream=True)
+    except ResponseError as e:
+        if "BUSYGROUP" not in str(e):
+            raise
+
+    try:
         logger.info("Worker started, polling for events...")
         while True:
-            # Poll for events
-            raw_event = await redis_client.blpop(QUEUE_NAME, timeout=1)
-            if raw_event is None:
+            # Read from Redis Stream
+            events = await redis_client.xreadgroup(
+                CONSUMER_GROUP, CONSUMER_NAME, {STREAM_NAME: ">"}, count=10, block=5000
+            )
+            if not events:
                 continue
 
-            _, event_json = raw_event
-            try:
-                event = json.loads(event_json)
-                logger.info(f"Processing event: {event}")
-                # Check deduplication
-                event_id = f"{event['store_id']}:{event['session_id']}:{event['timestamp']}:{event['event_object_id']}"
-                if await dedup_cache.is_duplicate(event_id):
-                    logger.info(f"Skipping duplicate event: {event_id}")
+            for stream_event in events:
+                _, event_data = stream_event
+                if not event_data:
                     continue
 
-                # Insert event
-                logger.info(f"Inserting event to database: {event_id}")
-                await batch_writer.insert_event(event)
-                await dedup_cache.mark_processed(event_id)
-                logger.info(f"Event inserted successfully: {event_id}")
+                for message_id, message_dict in event_data:
+                    event_json = message_dict.get(b"data") or message_dict.get("data")
+                    if isinstance(event_json, bytes):
+                        event_json = event_json.decode('utf-8')
 
-            except json.JSONDecodeError as e:
-                logger.error(f"Invalid JSON in queue: {event_json}, error: {e}")
-                continue
-            except Exception as e:
-                logger.error(f"Error processing event: {e}", exc_info=True)
-                # Poison pill: skip and continue
-                continue
+                    try:
+                        event_obj = json.loads(event_json)
+                        logger.info(f"Processing event: {event_obj}")
+                        # Check deduplication
+                        event_id_str = f"{event_obj['store_id']}:{event_obj['session_id']}:{event_obj['timestamp']}:{event_obj['event_object_id']}"
+                        if await dedup_cache.is_duplicate(event_id_str):
+                            logger.info(f"Skipping duplicate event: {event_id_str}")
+                            await redis_client.xack(STREAM_NAME, CONSUMER_GROUP, message_id)
+                            continue
+
+                        # Insert event
+                        logger.info(f"Inserting event to database: {event_id_str}")
+                        await batch_writer.insert_event(event_obj)
+                        await dedup_cache.mark_processed(event_id_str)
+                        logger.info(f"Event inserted successfully: {event_id_str}")
+
+                        # Acknowledge the event after processing
+                        await redis_client.xack(STREAM_NAME, CONSUMER_GROUP, message_id)
+
+                    except json.JSONDecodeError as e:
+                        logger.error(f"Invalid JSON in stream: {event_json}, error: {e}")
+                        continue
+                    except Exception as e:
+                        logger.error(f"Error processing event: {e}", exc_info=True)
+                        # Poison pill: skip and continue
+                        continue
 
     except KeyboardInterrupt:
         logger.info("Shutting down worker")

@@ -48,3 +48,10 @@ class BatchEventPayload(BaseModel):
         if len(v) > 100:
             raise ValueError("batch cannot exceed 100 events")
         return v
+
+
+# Ajusta el validador para aceptar el formato correcto de batch
+class BatchValidator:
+    def validate(self, data):
+        if 'events' not in data:
+            raise ValueError('Formato incorrecto, se esperaba un objeto con la clave "events".')  # Cambia el formato esperado

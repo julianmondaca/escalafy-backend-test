@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   postgres:
     image: postgres:15
@@ -11,19 +9,34 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./db/migrations:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user -d analytics"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
   redis:
     image: redis:7-alpine
     ports:
       - "6379:6379"
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
 
   api:
     build:
       context: .
       dockerfile: ./api/Dockerfile
     depends_on:
-      - postgres
-      - redis
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     env_file:
       - .env
     ports:
@@ -34,7 +47,8 @@ services:
       context: .
       dockerfile: ./reporting/Dockerfile
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
     env_file:
       - .env
     ports:
@@ -45,8 +59,10 @@ services:
       context: .
       dockerfile: ./workers/Dockerfile
     depends_on:
-      - postgres
-      - redis
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     env_file:
       - .env
 
