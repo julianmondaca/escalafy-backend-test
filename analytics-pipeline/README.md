@@ -24,3 +24,14 @@ Redis se selecciona por su rendimiento en memoria, lo que permite operaciones de
 
 ## Garantizando entrega al menos una vez
 La entrega al menos una vez se asegura haciendo que los workers sean robustos frente a fallos. Cuando un worker obtiene un elemento de Redis, no debería eliminarlo completamente hasta que el lote al que pertenece se haya comprometido con éxito en PostgreSQL (por ejemplo, usando Redis Streams y grupos de consumidores con ACKs explícitos). Si un worker se cae antes de ACKear, otro worker volverá a procesar el mensaje.
+
+## Ejecución de pruebas de carga
+
+Para ejecutar el script de pruebas de carga, ejecuta dentro del directorio `analytics` (o `analytics-pipeline`) los siguientes comandos:
+
+```bash
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+python3 load_test_example.py http://localhost:8000 --duration 300 --target-rps 20
+```
