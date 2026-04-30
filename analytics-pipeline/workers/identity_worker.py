@@ -96,12 +96,11 @@ async def run_identity_worker() -> None:
     """
     Start the identity worker process.
     """
-    logger.info("Identity worker started")
     worker = IdentityWorker()
     try:
         await worker.link_identities()
     except KeyboardInterrupt:
-        logger.info("Identity worker shutting down")
+        pass
 
 
 if __name__ == "__main__":

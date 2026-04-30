@@ -25,7 +25,6 @@ async def run_worker() -> None:
     """
     Starts the consumer loop, pulling events from Redis and processing them.
     """
-    logger.info("Initializing worker...")
     await init_pool()
     redis_client = Redis.from_url(settings.redis_url)
     batch_writer = BatchWriter()
@@ -38,7 +37,6 @@ async def run_worker() -> None:
             raise
 
     try:
-        logger.info("Worker started, polling for events...")
         while True:
             # Read from Redis Stream
             events = await redis_client.xreadgroup(
@@ -85,7 +83,7 @@ async def run_worker() -> None:
                         continue
 
     except KeyboardInterrupt:
-        logger.info("Shutting down worker")
+        pass
     finally:
         await close_pool()
         await redis_client.aclose()
