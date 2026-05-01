@@ -5,7 +5,8 @@ import asyncio
 import logging
 from uuid import uuid4
 
-from db.connection import get_pool
+from db.connection import get_pool, init_pool, close_pool
+from reporting.queries import calculate_daily_aggregates
 
 logger = logging.getLogger(__name__)
 
@@ -61,7 +62,20 @@ class IdentityWorker:
                             ON CONFLICT (session_id, store_id) DO NOTHING
                         """, identity_id, session_id, store_id)
 
-                    logger.info(f"Linked {len(unlinked_sessions)} sessions to user identities")
+                    if unlinked_sessions:
+                        # Actualizar agregados diarios para las tiendas y fechas afectadas
+                        for session in unlinked_sessions:
+                            # Obtener la fecha del primer evento de esta sesión
+                            first_event = await conn.fetchrow("""
+                                SELECT timestamp FROM events 
+                                WHERE session_id = $1 
+                                ORDER BY timestamp ASC LIMIT 1
+                            """, session['session_id'])
+                            if first_event:
+                                event_date = first_event['timestamp'].date()
+                                await calculate_daily_aggregates(session['store_id'], event_date)
+                    else:
+                        await asyncio.sleep(5)
 
             except Exception as e:
                 logger.error(f"Error in identity linking: {e}", exc_info=True)
@@ -96,16 +110,16 @@ async def run_identity_worker() -> None:
     """
     Start the identity worker process.
     """
+    await init_pool()
     worker = IdentityWorker()
     try:
         await worker.link_identities()
     except KeyboardInterrupt:
         pass
+    finally:
+        await close_pool()
 
 
 if __name__ == "__main__":
     logging.basicConfig(level="INFO")
     asyncio.run(run_identity_worker())
-
-# Llama a calculate_daily_aggregates en el flujo de trabajo
-calculate_daily_aggregates()  # Asegúrate de que se llame en el flujo de trabajo

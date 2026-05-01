@@ -66,5 +66,16 @@ services:
     env_file:
       - .env
 
+  identity_worker:
+    build:
+      context: .
+      dockerfile: ./workers/Dockerfile
+    command: ["python", "-m", "workers.identity_worker"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    env_file:
+      - .env
+
 volumes:
   postgres_data:
