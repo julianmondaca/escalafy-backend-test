@@ -27,11 +27,3 @@ class DeduplicationCache:
         """
         key = f"processed:{event_id}"
         await self.redis.setex(key, self.ttl, "1")
-
-
-async def is_duplicate(event_id: str) -> bool:
-    """
-    Checks if an event with the given ID has already been recently processed.
-    """
-    # Legacy function, use DeduplicationCache instead
-    return False
