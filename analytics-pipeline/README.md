@@ -9,8 +9,7 @@ Se proporciona una API de reporting para consultar los datos procesados y los ag
 1. Clona el repositorio.
 2. Copia `.env.example` a `.env` y ajusta los valores si es necesario.
 3. Ejecuta `docker compose up --build -d` para iniciar todos los servicios (PostgreSQL, Redis, API, Worker, Reporting).
-4. Ejecuta las migraciones de base de datos (las instrucciones se añadirán más adelante cuando las herramientas estén configuradas).
-5. La API estará disponible en `http://localhost:8000` y Reporting en `http://localhost:8001`.
+4. La API estará disponible en `http://localhost:8000` y Reporting en `http://localhost:8001`.
 
 ## Interacción de componentes
 - **API**: Recibe eventos de los clientes, los valida y los envía a una cola en Redis.
